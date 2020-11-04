@@ -20,12 +20,10 @@ void CLI::load(String filepath) {
 
 void CLI::enable() {
   enabled = true;
-  prntln(CLI_SERIAL_ENABLED);
 }
 
 void CLI::disable() {
   enabled = true;
-  prntln(CLI_SERIAL_DISABLED);
 }
 
 void CLI::update() {
@@ -45,7 +43,6 @@ void CLI::update() {
 
 void CLI::stop() {
   queue->clear();
-  prntln(CLI_STOPPED_SCRIPT);
 }
 
 void CLI::enableDelay(uint32_t delayTime) {
@@ -62,7 +59,6 @@ void CLI::exec(String input) {
   // check delay
   if (delayed && (millis() - delayStartTime > delayTime)) {
     delayed = false;
-    prntln(CLI_RESUMED);
   }
 
   // when delay is on, add it to queue, else run it
@@ -100,11 +96,6 @@ void CLI::execFile(String path) {
 
     queue->add(tmpLine);
   }
-}
-
-void CLI::error(String message) {
-  prnt(CLI_ERROR);
-  prntln(message);
 }
 
 void CLI::parameterError(String parameter) {
@@ -284,50 +275,6 @@ void CLI::runCommand(String input) {
     scan.start(scanMode, time, nextmode, continueTime, channelHop, channel);
   }
 
-  // ===== SHOW ===== //
-  else if (eqlsCMD(0, CLI_SHOW)) {
-    // show selected [<all/aps/stations/names/ssids>]
-    if (eqlsCMD(1, CLI_SELECT)) {
-      if (list->size() > 2) {
-        for (int i = 2; i < list->size(); i++) {
-          if (eqlsCMD(i, CLI_AP))
-            accesspoints.printSelected();
-          else if (eqlsCMD(i, CLI_STATION))
-            stations.printSelected();
-          else if (eqlsCMD(i, CLI_NAME))
-            names.printSelected();
-          else if (eqlsCMD(i, CLI_ALL))
-            scan.printSelected();
-          else
-            parameterError(list->get(i));
-        }
-      } else {
-        scan.printSelected();
-      }
-    }
-
-    // show [<all/aps/stations/names/ssids>]
-    else {
-      if (list->size() > 1) {
-        for (int i = 1; i < list->size(); i++) {
-          if (eqlsCMD(i, CLI_AP))
-            accesspoints.printAll();
-          else if (eqlsCMD(i, CLI_STATION))
-            stations.printAll();
-          else if (eqlsCMD(i, CLI_NAME))
-            names.printAll();
-          else if (eqlsCMD(i, CLI_SSID))
-            ssids.printAll();
-          else if (eqlsCMD(i, CLI_ALL))
-            scan.printAll();
-          else
-            parameterError(list->get(i));
-        }
-      } else {
-        scan.printAll();
-      }
-    }
-  }
 
   // ===== (DE)SELECT ===== //
   // select [<type>] [<id>]
@@ -461,10 +408,8 @@ void CLI::runCommand(String input) {
       i++;
     }
 
-    if (name.length() == 0)
-      prntln(CLI_ERROR_NAME_LEN);
-    else if (mac.length() == 0)
-      prntln(CLI_ERROR_MAC_LEN);
+    if (name.length() == 0);
+    else if (mac.length() == 0);
     else
       names.add(mac, name, bssid, channel, selected, force);
   }
@@ -688,34 +633,14 @@ void CLI::runCommand(String input) {
     }
   }
 
-  // ===== CLEAR ===== //
-  // clear
-  else if (eqlsCMD(0, CLI_CLEAR)) {
-    for (int i = 0; i < 100; i++)
-      prnt(HASHSIGN);
-
-    for (int i = 0; i < 60; i++)
-      prntln(); 
-  }
-
-  // ===== FORMAT ==== //
-  // format
-  else if (eqlsCMD(0, CLI_FORMAT)) {
-    prnt(CLI_FORMATTING_SPIFFS);
-    SPIFFS.format();
-    prntln(SETUP_OK);
-  }
-
   // ===== DELETE ==== //
   // delete <file> [<lineFrom>] [<lineTo>]
   else if ((list->size() >= 2) && eqlsCMD(0, CLI_DELETE)) {
     if (list->size() == 2) {
       // remove whole file
       if (removeFile(list->get(1))) {
-        prnt(CLI_REMOVED);
         prntln(list->get(1));
       } else {
-        prnt(CLI_ERROR_REMOVING);
         prntln(list->get(1));
       }
     } else {
@@ -724,40 +649,14 @@ void CLI::runCommand(String input) {
       int endLine = list->size() == 4 ? list->get(3).toInt() : beginLine;
 
       if (removeLines(list->get(1), beginLine, endLine)) {
-        prnt(CLI_REMOVING_LINES);
         prnt(beginLine);
         prnt(String(SPACE) + String(DASH) + String(SPACE));
         prnt(endLine);
         prntln(String(SPACE) + list->get(1));
       } else {
-        prnt(CLI_ERROR_REMOVING);
         prntln(list->get(1));
       }
     }
-  }
-
-  // ===== WRITE ==== //
-  // write <file> <commands>
-  else if ((list->size() >= 3) && eqlsCMD(0, CLI_WRITE)) {
-    String path = list->get(1);
-    String buf = String();
-
-    int listSize = list->size();
-
-    for (int i = 2; i < listSize; i++) {
-      buf += list->get(i);
-
-      if (i < listSize - 1)
-        buf += SPACE;
-    }
-
-    prnt(CLI_WRITTEN);
-    prnt(buf);
-    prnt(CLI_TO);
-    prntln(list->get(1));
-
-    buf += NEWLINE;
-    appendFile(path, buf);
   }
 
   // ===== SEND ===== //
@@ -770,9 +669,7 @@ void CLI::runCommand(String input) {
     strToMac(list->get(3), stMac);
     uint8_t reason = list->get(4).toInt();
     uint8_t channel = list->get(5).toInt();
-    prnt(CLI_DEAUTHING);
     prnt(macToStr(apMac));
-    prnt(CLI_ARROW);
     prntln(macToStr(stMac));
     attack.deauthDevice(apMac, stMac, reason, channel);
   }
@@ -787,7 +684,6 @@ void CLI::runCommand(String input) {
 
     for (int i = ssid.length(); i < 32; i++)
       ssid += SPACE;
-    prnt(CLI_SENDING_BEACON);
     prnt(list->get(3));
     prntln(DOUBLEQUOTES);
     attack.sendBeacon(mac, ssid.c_str(), channel, eqlsCMD(5, CLI_WPA2));
@@ -803,7 +699,6 @@ void CLI::runCommand(String input) {
 
     for (int i = ssid.length(); i < 32; i++)
       ssid += SPACE;
-    prnt(CLI_SENDING_PROBE);
     prnt(list->get(3));
     prntln(DOUBLEQUOTES);
     attack.sendProbe(mac, ssid.c_str(), channel);
@@ -822,10 +717,7 @@ void CLI::runCommand(String input) {
           strtoul((packetStr.substring(i * 2, i * 2 + 2)).c_str(), NULL, 16);
 
     if (attack.sendPacket(packet, packetSize, wifi_channel, 10)) {
-      prntln(CLI_CUSTOM_SENT);
       counter++;
-    } else {
-      prntln(CLI_CUSTOM_FAILED);
     }
   }
 
@@ -987,21 +879,6 @@ void CLI::runCommand(String input) {
     stopAP();
   }
 
-  // ===== SCREEN ===== //
-  // screen mode <menu/packetmonitor/buttontest/loading>
-  else if (eqlsCMD(0, CLI_SCREEN) && eqlsCMD(1, CLI_MODE)) {
-    if (eqlsCMD(2, CLI_MODE_BUTTONTEST))
-      displayUI.mode = displayUI.DISPLAY_MODE::BUTTON_TEST;
-    else if (eqlsCMD(2, CLI_MODE_PACKETMONITOR))
-      displayUI.mode = displayUI.DISPLAY_MODE::PACKETMONITOR;
-    else if (eqlsCMD(2, CLI_MODE_LOADINGSCREEN))
-      displayUI.mode = displayUI.DISPLAY_MODE::LOADSCAN;
-    else if (eqlsCMD(2, CLI_MODE_MENU))
-      displayUI.mode = displayUI.DISPLAY_MODE::MENU;
-    else
-      parameterError(list->get(2));
-    prntln(CLI_CHANGED_SCREEN);
-  }
 
   // screen <on/off>
   else if (eqlsCMD(0, CLI_SCREEN) &&
@@ -1031,9 +908,7 @@ void CLI::runCommand(String input) {
     }
   }
  else {
-    prnt(CLI_ERROR_NOT_FOUND_A);
     prnt(input);
-    prntln(CLI_ERROR_NOT_FOUND_B);
     // some debug stuff
  }
 }
