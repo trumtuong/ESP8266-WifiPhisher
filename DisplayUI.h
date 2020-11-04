@@ -5,14 +5,12 @@
 #include "Alert.h"
 #include "Arduino.h"
 #include "Attack.h"
-// #include "CarRaceGame.h"
 #include "Credential.h"
 #include "Keyboard.h"
 #include "Names.h"
 #include "SSIDs.h"
 #include "Scan.h"
 #include "Settings.h"
-// #include "TRexGame.h"
 #include "WifiConfigData.h"
 #include "font.h"
 #include "images.h"
@@ -104,9 +102,6 @@ public:
     BRIGHTNESS,
     CAPTIVE,
     CREDENTIAL,
-    RESET,
-    SMARTCONFIG,
-    GAME
   };
 
   enum SET_TIME {
@@ -119,20 +114,10 @@ public:
 
   enum HOME_MODE { HOME_1, HOME_2, HOME_3, HOME_4 };
 
-  enum GAME_TYPE { DINOSAURIA, FLAPPY_BIRD, NONE_GAME, PONG, CAR_RACE };
-
-  // enum KEYBOARD_MODE { LOWERCASE, UPPERCASE, NUMBER, SPECIFIC };
-
   uint8_t mode = DISPLAY_MODE::MENU;
   uint8_t clock_set = SET_TIME::SET_HOUR;
-  uint8_t game_type = GAME_TYPE::DINOSAURIA;
 
   uint8_t home_mode = HOME_MODE::HOME_1;
-  // String keyboard_lowercase = "QWERTYUIOPASDFGHJKLZXCVBNM";
-  // String keyboard_uppercase = "QWERTYUIOPASDFGHJKLZXCVBNM";
-  // String keyboard_number = "123456789";
-  // String keyboard_specific = "~!@#$%^&*()_+-=[]{};':\"\\,./<>?";
-  // String text_keyboard = String();
 
   Button *up = NULL;
   Button *down = NULL;
@@ -207,14 +192,12 @@ private:
   Menu credentialMenu;
   Menu wifiMenu;
   Menu wifiHackMenu;
-  // Menu gameMenu;
   Menu timeOnScreenMenu;
 
   Menu apListMenu;
   Menu stationListMenu;
   Menu nameListMenu;
   Menu ssidListMenu;
-  Menu wifiListCaptiveSmartconfigMenu;
   Menu wifiListCaptiveScanMenu;
   Menu wifiListCaptiveScanHackMenu;
   Menu wifiCaptiveMenu;
@@ -238,15 +221,9 @@ private:
   void drawPacketMonitor();
   void drawIntro();
   void clearMenu(Menu *menu);
-  void drawSmartconfig();
   void drawList();
   void drawGUI();
   void drawHome();
-  void drawHome2();
-  void drawHome3();
-  void drawHome4();
-  void drawCntAccount();
-  void drawDeviceInfo();
   void drawSystemInfo();
 
   void buttonUpdate();
