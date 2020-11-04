@@ -74,8 +74,6 @@ void Settings::load() {
     setRandomTX(data.get<bool>(keyword(S_RANDOMTX)));
   if (data.containsKey(keyword(S_PROBESPERSSID)))
     setProbesPerSSID(data.get<uint8_t>(keyword(S_PROBESPERSSID)));
-
-  prnt(S_SETTINGS_LOADED);
   prntln(FILE_PATH);
 
   // check and fix mac
@@ -123,21 +121,20 @@ void Settings::reset() {
 
   // SCAN
   setChTime(384);
-  setMinDeauths(1);
+  setMinDeauths(3);
 
   // ATTACK
   setAttackTimeout(0);
   setForcePackets(3);
   setDeauthsPerTarget(30);
   setDeauthReason(1);
-  setBeaconChannel(false);
-  setBeaconInterval(false);
+  setBeaconChannel(true);
+  setBeaconInterval(true);
   setRandomTX(false);
-  setProbesPerSSID(1);
+  setProbesPerSSID(20);
   wifiConfig.deleteAll();
   credential.deleteAll();
 
-  prntln(S_SETTINGS_RESETED);
 }
 
 String Settings::getJsonStr() {
@@ -193,7 +190,6 @@ void Settings::save(bool force) {
     String buf = getJsonStr();
 
     if (writeFile(FILE_PATH, buf)) {
-      prnt(S_SETTINGS_SAVED);
       prntln(FILE_PATH);
       changed = false;
     } else {
@@ -217,7 +213,6 @@ void Settings::print() {
   settingsJson.replace("{", "{\r\n");
   settingsJson.replace("}", "\r\n}");
   settingsJson.replace(",", "\r\n");
-  prntln(S_SETTINGS_HEADER);
   prntln(settingsJson);
 }
 
@@ -288,12 +283,9 @@ void Settings::set(const char *str, String value) {
   }
 
   else {
-    prnt(S_ERROR_NOT_FOUND);
     prntln(str);
     return;
   }
-
-  prnt(S_CHANGED_SETTING);
   prntln(str);
 }
 
@@ -363,7 +355,6 @@ String Settings::get(const char *str) {
     return "AP: " + macToStr(macAP) + ", Station: " + macToStr(macSt);
 
   else {
-    prnt(S_ERROR_NOT_FOUND);
     prntln(str);
   }
 
@@ -474,10 +465,7 @@ void Settings::setChannel(uint8_t channel) {
     Settings::channel = channel;
     setWifiChannel(channel);
     changed = true;
-    prnt(S_CHANNEL_CHANGE);
     prntln(channel);
-  } else {
-    prntln(S_CHANNEL_ERROR);
   }
 }
 
@@ -487,7 +475,6 @@ void Settings::setSSID(String ssid) {
     Settings::ssid = ssid;
     changed = true;
   } else {
-    prntln(S_ERROR_SSID_LEN);
     prntln("ssid: ");
     prntln(ssid);
   }
@@ -498,8 +485,6 @@ void Settings::setPassword(String password) {
     password = fixUtf8(password);
     Settings::password = password;
     changed = true;
-  } else {
-    prntln(S_ERROR_PASSWORD_LEN);
   }
 }
 
