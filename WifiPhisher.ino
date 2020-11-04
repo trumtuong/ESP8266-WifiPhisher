@@ -1,4 +1,8 @@
-/*Real deautheR*/
+/*ESP8266 WifiPhisher
+ * Facebook.com/vuongk03
+ * 0971.282.336
+ * vanvuonghp234@gmail.com
+ */
 
 extern "C" {
 #include "user_interface.h"
@@ -45,8 +49,6 @@ Keyboard keyboard;
 
 #include "wifi.h"
 
-// #include "ESPAsyncWebServer.h"
-
 uint32_t autosaveTime = 0;
 uint32_t currentTime = 0;
 
@@ -70,15 +72,12 @@ void setup() {
   Serial.println();
   // Start EEPROM
   EEPROM.begin(4096);
-
-  prnt(SETUP_MOUNT_SPIFFS);
   prntln(SPIFFS.begin() ? SETUP_OK : SETUP_ERROR);
 
   // auto repair when in boot-loop
   uint8_t bootCounter = EEPROM.read(0);
 
   if (bootCounter >= 5) {
-    prnt(SETUP_FORMAT_SPIFFS);
     SPIFFS.format();
     prntln(SETUP_OK);
   } else {
@@ -141,7 +140,6 @@ void setup() {
   if (settings.getCLI()) {
     cli.enable();
   } else {
-    prntln(SETUP_SERIAL_WARNING);
     Serial.flush();
     Serial.end();
   }
@@ -153,9 +151,6 @@ void setup() {
   prntln(SETUP_STARTED);
 pinMode(D4, OUTPUT);
 }
-
-// unsigned long _oldTimeAttack = millis();
-// unsigned int _updateTimeAttack = 1000;
 unsigned long cnt = 0;
 
 void loop() {
@@ -163,22 +158,10 @@ void loop() {
   currentTime = millis();
   wifiUpdate(); // manage access point
   attack.update();
-  // if (attack.isRunning()) {
-  //   if (millis() - _oldTimeAttack > _updateTimeAttack) {
-  //     attack.update(); // run attacks
-  //     _updateTimeAttack = millis();
-  //   }
-  // }
-  //  prnt("data count: ");
-  //  prntln(String(cnt));
   displayUI.update();
   cli.update();   // read and run serial input
   scan.update();  // run scan
   ssids.update(); // run random mode, if enabled
-
-  // prntln(analogRead(A0));
-  // delay(100);
-  // auto-save
   if (settings.getAutosave() &&
       (currentTime - autosaveTime > settings.getAutosaveTime())) {
     autosaveTime = currentTime;
@@ -197,37 +180,35 @@ void loop() {
 
          if(digitalRead(12) == LOW && digitalRead(13) == LOW) {
           if(attack.isRunning()){ 
+      WiFi.mode(WIFI_OFF);
+      digitalWrite(D4, HIGH);
+      alert.showSuccess(str(D_STOPATTACK_ALERT)); 
       scan.stop();             
       attack.stop();
-      WiFi.mode(WIFI_OFF);
-      alert.showSuccess(str(D_STOPATTACK_ALERT)); 
       }
       else{
+      WiFi.mode(WIFI_OFF);
+      alert.showSuccess(str(D_ATTACKALL_ALERT));
+      digitalWrite(D4, LOW);
       cli.runCommand("scan -ap -c 60s");           
-      cli.runCommand("attack -da");
-      alert.showSuccess(str(D_ATTACKALL_ALERT));           
+      cli.runCommand("attack -da");        
         }
     }
 
-   // if(digitalRead(12) == LOW && digitalRead(14) == LOW) {
-   //   serialInterface.runCommand("set WebInterface true");
-   // }
-
-   // if(digitalRead(13) == LOW && digitalRead(14) == LOW) {
-   //   serialInterface.runCommand("set WebInterface false");
-  //  }
-
   if(digitalRead(0)== LOW){
-    if(attack.isRunning()){ 
+          if(attack.isRunning()){ 
+      WiFi.mode(WIFI_OFF);
+      digitalWrite(D4, HIGH);
+      alert.showSuccess(str(D_STOPATTACK_ALERT)); 
       scan.stop();             
       attack.stop();
-      WiFi.mode(WIFI_OFF);
-      alert.showSuccess(str(D_STOPATTACK_ALERT));
       }
       else{
+      WiFi.mode(WIFI_OFF);
+      alert.showSuccess(str(D_ATTACKALL_ALERT));
+      digitalWrite(D4, LOW);
       cli.runCommand("scan -ap -c 60s");           
-      cli.runCommand("attack -da");
-      alert.showSuccess(str(D_ATTACKALL_ALERT));          
+      cli.runCommand("attack -da");        
         }
        }
   
