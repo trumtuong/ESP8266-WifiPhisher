@@ -1,9 +1,4 @@
-/*
-CAUTION: if want to display image into oled
--> convert image to xbm image extension
--> use any text editor to open xbm image
--> copy text inside image paste to your image define
-*/
+
 
 #include "DisplayUI.h"
 // #include "images.h"
@@ -115,23 +110,63 @@ void DisplayUI::setup() {
     addMenuNode(&mainMenu, scan_bits, D_SCAN, &scanMenu);       /// SCAN
     addMenuNode(&mainMenu, show_bits, D_SHOW, &showMenu);       // SHOW
     addMenuNode(&mainMenu, attack_bits, D_ATTACK, &attackMenu); // ATTACK
-     addMenuNode(&mainMenu, monitor_bits, D_PACKET_MONITOR,
+    addMenuNode(&mainMenu, captive_portal_bits, D_GET_WIFI_SCAN_HACK_WIFI, &wifiListCaptiveScanHackMenu);
+    createMenu(&wifiListCaptiveScanHackMenu, &mainMenu, DISPLAY_LIST, [this]() {
+               int c = accesspoints.count();
+               for (int i = 0; i < c; i++) {
+                 addMenuNode(
+                     &wifiListCaptiveScanHackMenu,
+                     [i]() {
+                       return b2a(accesspoints.getSelected(i)) +
+                              accesspoints.getSSID(i);
+                     },
+                     [this, i]() {
+                       if (attack.isRunning()) {
+                         if (alert.alertOptions(
+                                 str(D_TITLE_SET_CAPTIVE_STOP_WIFI_HACKING), "",
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+                           attack.stop();
+                           WiFi.mode(WIFI_OFF);
+                         }
+                         accesspoints.deselectAll();
+                         alert.showSuccess(str(D_SUCCESS_ALERT));
+                         configInit();
+                       } else {
+                         if (alert.alertOptions(str(D_HACK_SSID), String (accesspoints.getSSID(i)),
+                                                str(D_AGREE_BUTTON),
+                                                str(D_CANCEL_BUTTON))) {
+                           accesspoints.deselectAll();
+                           accesspoints.select(i);
+                           String ssid = accesspoints.getSSID(i);
+                           if (alert.alertOptions(
+                                   str(S_SSID), str(D_ADD_EXTENSION_NAME_SSID),
+                                   str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+                             ssid = keyboard.show(accesspoints.getSSID(i));
+                           }
+                           settings.setCaptiveType(CAPTIVE_TYPE::WIFI);
+                           settings.setNonePassword(true);
+                           settings.setSSID(ssid);
+                           credential.setNameWifi(accesspoints.getSSID(i));
+                           settings.setChangeSSID();
+                           settings.save(true);
+                           attack.start(false, true, false, false, true,
+                                        settings.getAttackTimeout() * 1000);
+                           alert.showSuccess(str(D_SUCCESS_ALERT));
+                         }
+                         configInit();
+                       }
+                     });
+               }
+             });
+    addMenuNode(&mainMenu, wifi1_bits, D_WIFI1, &listWifiCredential); // List Password
+    addMenuNode(&mainMenu, monitor_bits, D_PACKET_MONITOR,        // Monitor
                  [this]() { // PACKET MONITOR
                    scan.start(SCAN_MODE_SNIFFER, 0, SCAN_MODE_OFF, 0, false,
                               wifi_channel);
                    mode = DISPLAY_MODE::PACKETMONITOR;
                  });
-    addMenuNode(&mainMenu, captive_portal_bits, D_HACK_AND_CAPTIVE_PORTAL,
-                &captiveMenu);
-
-    addMenuNode(&mainMenu, credentail_bits, D_CREDENTIAL, &credentialMenu);
-
-    addMenuNode(&mainMenu, wifi_bits, D_WIFI, &wifiMenu);
-
-    addMenuNode(&mainMenu, time_on_screen_bits, D_TIME_ON_SCREEN,
-                &timeOnScreenMenu);
-
-    addMenuNode(&mainMenu, menu_info_bits, D_INFO, [this]() { // REBOOT
+    addMenuNode(&mainMenu, time_on_screen_bits, D_TIME_ON_SCREEN, &timeOnScreenMenu);  // Setting
+    addMenuNode(&mainMenu, menu_info_bits, D_INFO, [this]() { // Info
       mode = DISPLAY_MODE::HOME;
       display.setFont(DejaVu_Sans_Mono_12);
       display.setTextAlignment(TEXT_ALIGN_LEFT);
@@ -186,54 +221,305 @@ void DisplayUI::setup() {
         &ssidListMenu);
   });
 
-  createMenu(&captiveMenu, &mainMenu, DISPLAY_LIST, [this]() {
-    addMenuNode(
-        &captiveMenu,
-        [this]() {
-          return leftRight(str(D_GET_WIFI_SCAN_HACK_WIFI), "", maxLen);
-        },
-        &wifiListCaptiveScanHackMenu);
-
-    addMenuNode(
-        &captiveMenu,
-        [this]() { // SSIDs 0
-          return leftRight(str(D_CREATE_CAPTIVE_PORTAL), "", maxLen);
-        },
-        &wifiCaptiveMenu);
-  });
-
   createMenu(&timeOnScreenMenu, &mainMenu, DISPLAY_LIST, [this]() {
-        addMenuNode(&timeOnScreenMenu, D_TIME_1M, [this]() {
-      settings.setDisplayTimeout(60);
-      settings.save(true);
-      alert.showSuccess(str(D_SUCCESS_ALERT));
+     addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(D_SET_ATTACK_TIMEOUT),
+                           String(settings.getAttackTimeout()) + "s",
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_SET_ATTACK_TIMEOUT1),
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String timeout = keyboard.show();
+
+            if (timeout.length() > 0) {
+              if (keyboard.isNumber(timeout)) {
+                if (timeout.toInt() >= 0) {
+                  settings.setAttackTimeout(timeout.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(D_DEAUTH_PACKET), // D_DEAUTH_PACKET
+                           String(settings.getDeauthsPerTarget()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_DEAUTHPACKET),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String deauth = keyboard.show();
+
+            if (deauth.length() > 0) {
+              if (keyboard.isNumber(deauth)) {
+                if (deauth.toInt() >= 20) {
+                  settings.setDeauthsPerTarget(deauth.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                } else {
+                  alert.showFailure(str(D_DEAUTHPACKETS));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // 
+          return leftRight(str(S_DISPLAY_TIMEOUT), // S_DISPLAY_TIMEOUT
+                           String(settings.getDisplayTimeout()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(S_DISPLAY_TIMEOUT1),   // D_FORCE D_FORCE1
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String DisplayTimeout = keyboard.show();
+
+            if (DisplayTimeout.length() > 0) {
+              if (keyboard.isNumber(DisplayTimeout)) {
+                if ( DisplayTimeout.toInt() >= 20) {
+                  settings.setDisplayTimeout(DisplayTimeout.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }
+                else {
+                  alert.showFailure(str(D_DEAUTHPACKETS));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // 
+          return leftRight(str(D_SET_FORCE_PACKETS), // D_SET_FORCE_PACKETS
+                           String(settings.getForcePackets()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_FORCE1),   // D_FORCE D_FORCE1
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String force = keyboard.show();
+
+            if (force.length() > 0) {
+              if (keyboard.isNumber(force)) {
+                if ( force.toInt() <= 255) {
+                  settings.setForcePackets(force.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }
+                 else {
+                  alert.showFailure(str(D_MINMAC_FORCE));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(D_MIN_DEAUTH), // D_MIN_DEAUTH
+                           String(settings.getMinDeauths()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_MIN_DEAUTH1),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String mindeauth = keyboard.show();
+
+            if (mindeauth.length() > 0) {
+              if (keyboard.isNumber(mindeauth)) {
+                if (mindeauth.toInt() <= 10) {
+                  settings.setMinDeauths(mindeauth.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }
+                else {
+                  alert.showFailure(str(D_MINDEAUTH));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+        
+    //ProbesPerSSID
+    addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(S_PROBESPERSSID1), // D_PROBEPERSSID1
+                           String(settings.getProbesPerSSID()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_PROBEPERSSID1),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String ProbesPerSSID = keyboard.show();
+
+            if (ProbesPerSSID.length() > 0) {
+              if (keyboard.isNumber(ProbesPerSSID)) {
+                if (ProbesPerSSID.toInt() >= 20) {
+                  settings.setProbesPerSSID(ProbesPerSSID.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }
+                else {
+                  alert.showFailure(str(D_DEAUTHPACKETS));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(D_DEAUTH_REASON1), // D_DEAUTH_REASON
+                           String(settings.getDeauthReason()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_DEAUTH_REASON),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String DeauthReason = keyboard.show();
+
+            if (DeauthReason.length() > 0) {
+              if (keyboard.isNumber(DeauthReason)) {
+                if (DeauthReason.toInt() <= 24) {
+                  settings.setDeauthReason(DeauthReason.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }else {
+                  alert.showFailure(str(D_REASONMAX));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(S_CHANNEL), // S_CHANNEL
+                           String(settings.getChannel()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(D_CHANNEL1),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String channel1 = keyboard.show();
+
+            if (channel1.length() > 0) {
+              if (keyboard.isNumber(channel1)) {
+                if (channel1.toInt() <= 14) {
+                  settings.setChannel(channel1.toInt());
+                  alert.showSuccess(str(D_CHANNELMAX));
+                }else {
+                  alert.showFailure(str(D_CHANNELMAX1));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+addMenuNode(
+        &timeOnScreenMenu,
+        [this]() { // START
+          return leftRight(str(S_CHANNEL1), // S_CHANNEL
+                           String(settings.getChTime()),
+                           maxLen - 1);
+        },
+        [this]() {
+          if (alert.alertOptions(str(D_ATTACK1), str(S_CHANNEL2),   // 
+                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
+            String ChTime = keyboard.show();
+
+            if (ChTime.length() > 0) {
+              if (keyboard.isNumber(ChTime)) {
+                if (ChTime.toInt() >= 384) {
+                  settings.setChTime(ChTime.toInt());
+                  alert.showSuccess(str(D_SUCCESS_ALERT));
+                }else {
+                  alert.showFailure(str(D_CHANNELTIMEMIN));
+                }
+              } else {
+                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
+              }
+            } else {
+              alert.showFailure(str(D_INPUT_EMPTY));
+            }
+          }
+          configInit();
+        });
+
+addMenuNode(
+        &timeOnScreenMenu,
+[this]() {   //reset
+          return leftRight(str(D_RESET),
+           String(settings.getDeauthReason()),
+                           maxLen - 1);
+},
+    [this]() { // RESET
+      if (alert.alertOptions(str(D_RESET2), str(D_MESSAGE_RESET_DEVICE1),
+                             str(D_RESET), str(D_CANCEL_BUTTON))) {
+        settings.reset();
+        settings.save(true);
+        SPIFFS.format();
+        alert.showSuccess(str(D_SUCCESS));
+        ESP.restart();
+      } else {
+        changeMenu(&timeOnScreenMenu);
+      }
       configInit();
+
     });
-    addMenuNode(&timeOnScreenMenu, D_TIME_10M, [this]() {
-      settings.setDisplayTimeout(600);
-      settings.save(true);
-      alert.showSuccess(str(D_SUCCESS_ALERT));
-      configInit();
-    });
-    addMenuNode(&timeOnScreenMenu, D_TIME_30M, [this]() {
-      settings.setDisplayTimeout(1800);
-      settings.save(true);
-      alert.showSuccess(str(D_SUCCESS_ALERT));
-      configInit();
-    });
-    addMenuNode(&timeOnScreenMenu, D_TIME_1H, [this]() {
-      settings.setDisplayTimeout(3600);
-      settings.save(true);
-      alert.showSuccess(str(D_SUCCESS_ALERT));
-      configInit();
-    });
-    addMenuNode(&timeOnScreenMenu, D_TIME_1D, [this]() {
-      settings.setDisplayTimeout(86400);
-      settings.save(true);
-      alert.showSuccess(str(D_SUCCESS_ALERT));
-      configInit();
-    });
+        
   });
+
 
   createMenu(&captiveSelectMenu, &wifiCaptiveMenu, DISPLAY_LIST, [this]() {
 
@@ -250,21 +536,7 @@ void DisplayUI::setup() {
     });
   });
 
-  createMenu(&credentialMenu, &mainMenu, DISPLAY_GUI, [this]() {
-    addMenuNode(&credentialMenu, wifi1_bits, D_WIFI1, &listWifiCredential);
-    addMenuNode(&credentialMenu, delete_bits, CLI_DELETE, [this]() {
-      if (alert.alertOptions(str(D_TITLE_DELETE_CREDENTIAL), "",
-                             str(D_AGREE_ERASE_CREDENTIAL),
-                             str(D_CANCEL_BUTTON))) {
-        credential.deleteAll();
-        alert.showSuccess(str(D_SUCCESS));
-      }
-      configInit();
-      // changeMenu(&credentialMenu);
-    });
-  });
-
-  createMenu(&listWifiCredential, &credentialMenu, DISPLAY_LIST, [this]() {
+  createMenu(&listWifiCredential, &mainMenu, DISPLAY_LIST, [this]() {
     // add APs to list
     int c = credential.count(str(CLI_WIFI_CREDENTIAL));
     for (int i = 0; i < c; i++) {
@@ -277,7 +549,7 @@ void DisplayUI::setup() {
                    credential.getSocialPass(str(CLI_WIFI_CREDENTIAL), i) + " ";
           },
           [this, i]() {
-            if (alert.alertOptions(str(CLI_DELETE),
+            if (alert.alertOptions(str(CLI_DELETE1),
                                    str(D_TITLE_DELETE_CREDENTIAL),
                                    str(CLI_DELETE), str(D_CANCEL_BUTTON))) {
               credential.deleteIndex(str(CLI_WIFI_CREDENTIAL), i);
@@ -289,169 +561,11 @@ void DisplayUI::setup() {
     }
     if (c == 0) {
       addMenuNode(&listWifiCredential, D_EMPTY, [this]() { // SELECT ALL
-        changeMenu(&credentialMenu);
+        changeMenu(&mainMenu);
       });
     }
   });
-  // TODO:
-  // off wifi
-  // add new wifi
-  // create ap wifi
-  // disconnect wifi
-  createMenu(&wifiMenu, &mainMenu, DISPLAY_LIST, [this]() {
-    if (WiFi.getMode() == WIFI_OFF) {
-      addMenuNode(&wifiMenu, D_ON_WIFI, [this]() {
-        if (alert.alertOptions(str(D_WIFI), str(D_TITLE_TURN_ON_WIFI),
-                               str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-          WiFi.mode(WIFI_AP);
-          alert.showSuccess(str(D_SUCCESS_ALERT));
-        }
-        configInit();
-        changeMenu(&wifiMenu);
-      });
-    } else {
-      addMenuNode(&wifiMenu, D_OFF_WIFI, [this]() {
-        if (alert.alertOptions(str(D_WIFI), str(D_TITLE_TURN_OFF_WIFI),
-                               str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-          WiFi.mode(WIFI_OFF);
-          alert.showSuccess(str(D_SUCCESS_ALERT));
-        }
-        configInit();
-        changeMenu(&wifiMenu);
-      });
-    }
 
-    addMenuNode(&wifiMenu, D_ADD_NEW_WIFI,
-                [this]() { mode = DISPLAY_MODE::SMARTCONFIG; });
-  });
-
-  createMenu(&wifiListCaptiveScanHackMenu, &captiveMenu, DISPLAY_LIST,
-             [this]() {
-               int c = accesspoints.count();
-               for (int i = 0; i < c; i++) {
-                 addMenuNode(
-                     &wifiListCaptiveScanHackMenu,
-                     [i]() {
-                       return b2a(accesspoints.getSelected(i)) +
-                              accesspoints.getSSID(i);
-                     },
-                     [this, i]() {
-                       if (attack.isRunning()) {
-                         if (alert.alertOptions(
-                                 str(D_TITLE_SET_CAPTIVE_STOP_WIFI_HACKING), "",
-                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-                           attack.stop();
-                           WiFi.mode(WIFI_OFF);
-                         }
-                         accesspoints.deselectAll();
-                         alert.showSuccess(str(D_SUCCESS_ALERT));
-                         configInit();
-                       } else {
-                         if (alert.alertOptions(str(S_SSID), str(D_HACK_SSID),
-                                                str(D_AGREE_BUTTON),
-                                                str(D_CANCEL_BUTTON))) {
-                           accesspoints.deselectAll();
-                           accesspoints.select(i);
-                           String ssid = accesspoints.getSSID(i);
-                           if (alert.alertOptions(
-                                   str(S_SSID), str(D_ADD_EXTENSION_NAME_SSID),
-                                   str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-                             ssid = keyboard.show(accesspoints.getSSID(i));
-                           }
-                           settings.setCaptiveType(CAPTIVE_TYPE::WIFI);
-                           settings.setNonePassword(true);
-                           settings.setSSID(ssid);
-                           credential.setNameWifi(accesspoints.getSSID(i));
-                           settings.setChangeSSID();
-                           settings.save(true);
-                           attack.start(false, true, false, false, true,
-                                        settings.getAttackTimeout() * 1000);
-                           alert.showSuccess(str(D_SUCCESS_ALERT));
-                         }
-                         configInit();
-                       }
-                     },
-                     [this, i]() {});
-               }
-             });
-
-
-  // MARK: TODO
-  createMenu(&wifiCaptiveMenu, &captiveMenu, DISPLAY_LIST, [this]() {
-    addMenuNode(
-        &wifiCaptiveMenu,
-        [this]() { return leftRight(str(D_SELECT_VICTIM), "", maxLen); },
-        &wifiListCaptiveScanMenu);
-
-    addMenuNode(&wifiCaptiveMenu, D_CREATE_NEW_SSID, [this]() {
-      if (alert.alertOptions(str(D_SET_NEW_SSID), settings.getSSID(),
-                             str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-
-        String ssid = keyboard.show(settings.getSSID());
-        if (ssid.length() > 0) {
-          if (alert.alertOptions(str(D_SET_PASSWORD), str(D_SET_PASS_FOR_SSID),
-                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-            String password = keyboard.show();
-            if (password.length() >= 8) {
-              settings.setNonePassword(false);
-              settings.setPassword(password);
-              alert.showSuccess(str(D_SUCCESS_ALERT));
-            } else {
-              settings.setNonePassword(true);
-              alert.showSuccess(str(D_SET_NONE_PASS_FOR_SSID));
-            }
-          } else {
-            settings.setSSID(ssid);
-            settings.save(true);
-            settings.setNonePassword(true);
-            settings.setChangeSSID();
-            alert.showSuccess(str(D_SET_NONE_PASS_FOR_SSID));
-          }
-        }
-      } else {
-        settings.setNonePassword(true);
-        settings.save(true);
-        settings.setChangeSSID();
-        alert.showSuccess(str(D_SET_NONE_PASS_FOR_SSID));
-      }
-
-      changeMenu(&wifiCaptiveMenu);
-      configInit();
-    });
-
-    addMenuNode(
-        &wifiCaptiveMenu,
-        [this]() {
-          return leftRight(str(D_CAPTIVE_PORTAL_ON_WITH), "", maxLen);
-        },
-        &captiveSelectMenu);
-
-    addMenuNode(
-        &wifiCaptiveMenu,
-        (attack.isRunning()) ? (D_STOP_ATTACK) : (D_START_ATTACK),
-        [this]() { // SELECT ALL
-          if (attack.isRunning()) {
-            if (alert.alertOptions(str(D_TITLE_SET_CAPTIVE_STOP_WIFI_HACKING),
-                                   "", str(D_AGREE_BUTTON),
-                                   str(D_CANCEL_BUTTON))) {
-              attack.stop();
-              WiFi.mode(WIFI_OFF);
-            }
-            accesspoints.deselectAll();
-            alert.showSuccess(str(D_SUCCESS_ALERT));
-            configInit();
-          } else {
-            if (alert.alertOptions(str(S_SSID), str(D_HACK_SSID),
-                                   str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-              attack.start(false, true, false, false, true,
-                           settings.getAttackTimeout() * 1000);
-              alert.showSuccess(str(D_SUCCESS_ALERT));
-            }
-          }
-          changeMenu(&wifiCaptiveMenu);
-          configInit();
-        });
-  });
 
   createMenu(&wifiListCaptiveScanMenu, &wifiCaptiveMenu, DISPLAY_LIST,
              [this]() {
@@ -896,36 +1010,6 @@ void DisplayUI::setup() {
     addMenuNode(
         &attackMenu,
         [this]() { // START
-          return leftRight(str(D_SET_ATTACK_TIMEOUT),
-                           String(settings.getAttackTimeout()) + "s",
-                           maxLen - 1);
-        },
-        [this]() {
-          if (alert.alertOptions(str(D_ATTACK), str(D_SET_ATTACK_TIMEOUT),
-                                 str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-            String timeout = keyboard.show();
-
-            if (timeout.length() > 0) {
-              if (keyboard.isNumber(timeout)) {
-                if (timeout.toInt() >= 60) {
-                  settings.setAttackTimeout(timeout.toInt());
-                  alert.showSuccess(str(D_SUCCESS_ALERT));
-                } else {
-                  alert.showFailure(str(D_SET_ATTACK_TIMEOUT_MIN_ERROR));
-                }
-              } else {
-                alert.showFailure(str(D_INPUT_NUMBER_WRONG_FORMAT));
-              }
-            } else {
-              alert.showFailure(str(D_INPUT_EMPTY));
-            }
-          }
-          configInit();
-        });
-
-    addMenuNode(
-        &attackMenu,
-        [this]() { // START
           return leftRight(
               str(attack.isRunning() ? D_STOP_ATTACK : D_START_ATTACK),
               attack.getPacketRate() > 0 ? (String)attack.getPacketRate()
@@ -977,13 +1061,10 @@ void DisplayUI::update() {
 
 void DisplayUI::on() {
   if (enabled) {
-    WiFi.mode(WIFI_AP);
+    WiFi.mode(WIFI_OFF);
     configOn();
     tempOff = false;
     buttonTime = currentTime; // update a button time to keep display on
-    prntln(D_MSG_DISPLAY_ON);
-  } else {
-    prntln(D_ERROR_NOT_ENABLED);
   }
 }
 
@@ -991,9 +1072,6 @@ void DisplayUI::off() {
   if (enabled) {
     configOff();
     tempOff = true;
-    prntln(D_MSG_DISPLAY_OFF);
-  } else {
-    prntln(D_ERROR_NOT_ENABLED);
   }
 }
 
@@ -1025,16 +1103,6 @@ void DisplayUI::setupButtons() {
       } else if (mode == DISPLAY_MODE::HOME) {
         switch (home_mode) {
         case HOME_MODE::HOME_1:
-          home_mode = HOME_MODE::HOME_2;
-          break;
-        case HOME_MODE::HOME_2:
-          home_mode = HOME_MODE::HOME_3;
-          break;
-        case HOME_MODE::HOME_3:
-          home_mode = HOME_MODE::HOME_4;
-          break;
-        default:
-          home_mode = HOME_MODE::HOME_1;
           break;
         }
       }
@@ -1076,16 +1144,6 @@ void DisplayUI::setupButtons() {
       } else if (mode == DISPLAY_MODE::HOME) {
         switch (home_mode) {
         case HOME_MODE::HOME_1:
-          home_mode = HOME_MODE::HOME_4;
-          break;
-        case HOME_MODE::HOME_2:
-          home_mode = HOME_MODE::HOME_1;
-          break;
-        case HOME_MODE::HOME_3:
-          home_mode = HOME_MODE::HOME_2;
-          break;
-        default:
-          home_mode = HOME_MODE::HOME_3;
           break;
         }
       }
@@ -1214,10 +1272,6 @@ void DisplayUI::draw() {
       // case DISPLAY_MODE::BRIGHTNESS:
       //   drawSetBrightness();
       //   break;
-
-    case DISPLAY_MODE::SMARTCONFIG:
-      drawSmartconfig();
-      break;
 
     case DISPLAY_MODE::PACKETMONITOR:
       drawPacketMonitor();
@@ -1384,28 +1438,12 @@ void DisplayUI::drawPacketMonitor() {
 void DisplayUI::drawIntro() {
 
   display.setFont(DejaVu_Sans_Mono_10);
-  drawString(0, center(F("ESP8266 DEVIL"), 20));
+  drawString(0, center(F("ESP8266 WifiPhisher"), 20));
   drawString(1, center(F("by@244v234"), 20));
   drawString(2, center(F("Visit Other Projects"), 20));
   drawString(3, center(F("Hackster.io/244v234"), 20));
-  drawString(4, center(F("FB.com/vuongfcc"), 20));
+  drawString(4, center(F("======*******======"), 20));
   delay(4000);
-}
-
-void DisplayUI::drawSmartconfig() {
-  if (alert.alertOptions(str(D_WIFI), str(D_WIFI_SMARTCONFIG_CONNECT),
-                         str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
-    if (wifiConfig.smartconfig()) {
-      alert.alertNotify(str(D_WIFI), str(D_WIFI_CONNECTED),
-                        str(D_AGREE_BUTTON));
-    } else {
-      alert.alertNotify(str(D_WIFI), str(D_WIFI_CONNECT_FALSE),
-                        str(D_AGREE_BUTTON));
-    }
-  }
-  configInit();
-  mode = DISPLAY_MODE::MENU;
-  changeMenu(&wifiMenu);
 }
 
 void DisplayUI::drawHome() {
@@ -1413,152 +1451,39 @@ void DisplayUI::drawHome() {
   case HOME_MODE::HOME_1:
     drawSystemInfo();
     break;
-  case HOME_MODE::HOME_2:
-    drawHome2();
-    break;
-  case HOME_MODE::HOME_3:
-    drawHome3();
-    break;
-  default:
-    drawHome4();
-    break;
   }
 }
 
-void DisplayUI::drawHome2() { drawCntAccount(); }
-void DisplayUI::drawHome3() { drawDeviceInfo(); }
-void DisplayUI::drawHome4() {
-  display.setFont(Montez_Regular_32);
-  String clockTime = String(hour());
-
-  clockTime += ':';
-  if (minute() < 10)
-    clockTime += '0';
-  clockTime += String(minute());
-  clockTime += ':';
-  if (second() < 10)
-    clockTime += '0';
-  clockTime += String(second());
-  display.drawString(32, 13, clockTime);
-  int cnt_wifi = credential.count(str(CLI_WIFI_CREDENTIAL));
-
-  // drawString(1, left(clockTime, maxLen));
-  display.setFont(DejaVu_Sans_Mono_10);
-  String info = "Passwords:" + String(cnt_wifi);
-  display.drawString(0, 44, info);
-
-  display.setFont(DejaVu_Sans_Mono_10);
-  String dateTime = String(day());
-
-  if (day() < 10) { // 0 + 1 = 01
-    dateTime = "0" + dateTime;
-  }
-
-  dateTime = dateTime + DASH;  // 01+- = 01-
-  if (month() < 10) {          //
-    dateTime = dateTime + "0"; // 01-+0 = 01-0
-  }
-  dateTime = dateTime + String(month()) + DASH + String(year()); // 01-01-2020
-  drawString(0, 0, dateTime);
-
-  display.setFont(DejaVu_Sans_Mono_10);
-  String infoWifi = "W:";
-  if (WiFi.getMode() == WIFI_AP) {
-    infoWifi = infoWifi + "ap";
-  } else if (WiFi.getMode() == WIFI_AP_STA) {
-    infoWifi = infoWifi + "as";
-  } else if (WiFi.getMode() == WIFI_STA) {
-    infoWifi = infoWifi + "sta";
-  } else {
-    infoWifi = infoWifi + "off";
-  }
-
-  if (settings.captivePortal) {
-    display.drawString(0, 54, str(D_244v234));
-  } else {
-    drawImage(screenWidth - battIconFull_width, 0, battIconFull_width,
-              battIconFull_height, battIconFull_bits);
-    drawImage(screenWidth - battIconFull_width - usbIcon_width, 0,
-              usbIcon_width, usbIcon_height, usbIcon_bits);
-  }
-
-  display.drawString(0, 16, str(D_VER));
-}
-
-
-void DisplayUI::drawCntAccount() {
-  int cnt_wifi = credential.count(str(CLI_WIFI_CREDENTIAL));
-
-  // drawString(1, left(clockTime, maxLen));
-  display.setFont(DejaVu_Sans_Mono_10);
-  drawString(4, leftRight(str(CLI_WIFI_CREDENTIAL), String(cnt_wifi), maxLen));
-}
 
 void DisplayUI::drawSystemInfo() {
   // char s[150];
   FSInfo fs_info;
   SPIFFS.info(fs_info);
   display.setFont(DejaVu_Sans_Mono_10);
-  drawString(0, center("system info", 20));
+  drawString(0, center("System Info", 20));
   drawString(1, center("RAM", 20));
-  drawString(1, leftRight("type", "FS", 20));
+  drawString(1, leftRight("Type", "FS", 20));
 
   drawString(2, center(String(81920 / 1024) + "Kb", 20));
   drawString(2,
-             leftRight("total", String(fs_info.totalBytes / 1024) + "Kb", 20));
+             leftRight("Total", String(fs_info.totalBytes / 1024) + "Kb", 20));
 
   drawString(
       3, center(String(100 - system_get_free_heap_size() / (81920 / 100)) + "%",
                 20));
   drawString(
-      3, leftRight("usage",
+      3, leftRight("Usage",
                    String(fs_info.usedBytes / (fs_info.totalBytes / 100)) + "%",
                    20));
 
   drawString(
       4, center(String(system_get_free_heap_size() / (81920 / 100)) + "%", 20));
-  drawString(4, leftRight("free",
+  drawString(4, leftRight("Free",
                           String((fs_info.totalBytes - fs_info.usedBytes) /
                                  (fs_info.totalBytes / 100)) +
                               "%",
                           20));
 
-}
-
-void DisplayUI::drawDeviceInfo() {
-  display.setFont(DejaVu_Sans_Mono_10);
-  String mode = String();
-  String ip;
-  if (WiFi.getMode() == WIFI_AP) {
-    mode = str(D_WIFI_MODE_AP);
-    ip = WiFi.softAPIP().toString();
-  } else if (WiFi.getMode() == WIFI_AP_STA) {
-    mode = str(D_WIFI_MODE_AP_STA);
-    ip = WiFi.softAPIP().toString();
-  } else if (WiFi.getMode() == WIFI_STA) {
-    mode = str(D_WIFI_MODE_STA);
-    ip = WiFi.localIP().toString();
-  } else {
-    mode = str(D_WIFI_MODE_OFF);
-    ip = "";
-  }
-  String captive_portal_state =
-      String((settings.captivePortal) ? str(CLI_ON) : str(CLI_OFF));
-  String deauther_state =
-      String(attack.isRunning() ? str(CLI_ON) : str(CLI_OFF));
-  String captive_mode_state;
-  int captive_type = settings.getCaptiveType();
-  switch (captive_type) {
-  default:
-    captive_mode_state = str(CLI_WIFI_CREDENTIAL);
-    break;
-  }
-  // drawString(0, center(ip, maxLen));
-  drawString(0, leftRight(str(D_IP_NAME), ip, maxLen));
-  drawString(1, leftRight(str(CLI_WIFI_CREDENTIAL), mode, maxLen));
-  drawString(2, leftRight(str(D_CAPTIVE_NAME), captive_portal_state, maxLen));
-  drawString(3, leftRight(str(D_CREDENTIAL_WITH), captive_mode_state, maxLen));
-  drawString(4, leftRight(str(D_DEAUTHER_STATUS), deauther_state, maxLen));
 }
 
 void DisplayUI::clearMenu(Menu *menu) {
@@ -1634,7 +1559,7 @@ void DisplayUI::addMenuNode(Menu *menu, const uint8_t image[], const char *ptr,
 void DisplayUI::addMenuNode(Menu *menu, std::function<String()> getStr,
                             std::function<void()> click,
                             std::function<void()> hold) {
-  menu->list->add(MenuNode{menu_exit_bits, getStr, click, hold});
+  menu->list->add(MenuNode{scan_bits, getStr, click, hold});
 }
 
 void DisplayUI::addMenuNode(Menu *menu, std::function<String()> getStr,
