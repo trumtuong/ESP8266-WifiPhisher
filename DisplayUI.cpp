@@ -110,7 +110,7 @@ void DisplayUI::setup() {
     addMenuNode(&mainMenu, scan_bits, D_SCAN, &scanMenu);       /// SCAN
     addMenuNode(&mainMenu, show_bits, D_SHOW, &showMenu);       // SHOW
     addMenuNode(&mainMenu, attack_bits, D_ATTACK, &attackMenu); // ATTACK
-    addMenuNode(&mainMenu, captive_portal_bits, D_GET_WIFI_SCAN_HACK_WIFI, &wifiListCaptiveScanHackMenu);
+    addMenuNode(&mainMenu, captive_portal_bits, D_GET_WIFI_SCAN_HACK_WIFI, &wifiListCaptiveScanHackMenu); //Hack wifi
     createMenu(&wifiListCaptiveScanHackMenu, &mainMenu, DISPLAY_LIST, [this]() {
                int c = accesspoints.count();
                for (int i = 0; i < c; i++) {
@@ -222,7 +222,7 @@ void DisplayUI::setup() {
   });
 
   createMenu(&timeOnScreenMenu, &mainMenu, DISPLAY_LIST, [this]() {
-     addMenuNode(
+     addMenuNode(             //attack timeout
         &timeOnScreenMenu,
         [this]() { // START
           return leftRight(str(D_SET_ATTACK_TIMEOUT),
@@ -251,7 +251,7 @@ void DisplayUI::setup() {
         });
 
 addMenuNode(
-        &timeOnScreenMenu,
+        &timeOnScreenMenu,   // DeauthPerPackets
         [this]() { // START
           return leftRight(str(D_DEAUTH_PACKET), // D_DEAUTH_PACKET
                            String(settings.getDeauthsPerTarget()),
@@ -284,12 +284,12 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
         [this]() { // 
-          return leftRight(str(S_DISPLAY_TIMEOUT), // S_DISPLAY_TIMEOUT
+          return leftRight(str(S_DISPLAY_TIMEOUT), // DISPLAY_TIMEOUT
                            String(settings.getDisplayTimeout()),
                            maxLen - 1);
         },
         [this]() {
-          if (alert.alertOptions(str(D_ATTACK1), str(S_DISPLAY_TIMEOUT1),   // D_FORCE D_FORCE1
+          if (alert.alertOptions(str(D_ATTACK1), str(S_DISPLAY_TIMEOUT1), 
                                  str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
             String DisplayTimeout = keyboard.show();
 
@@ -315,12 +315,12 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
         [this]() { // 
-          return leftRight(str(D_SET_FORCE_PACKETS), // D_SET_FORCE_PACKETS
+          return leftRight(str(D_SET_FORCE_PACKETS), // FORCE_PACKETS
                            String(settings.getForcePackets()),
                            maxLen - 1);
         },
         [this]() {
-          if (alert.alertOptions(str(D_ATTACK1), str(D_FORCE1),   // D_FORCE D_FORCE1
+          if (alert.alertOptions(str(D_ATTACK1), str(D_FORCE1),   // 
                                  str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
             String force = keyboard.show();
 
@@ -379,7 +379,7 @@ addMenuNode(
     addMenuNode(
         &timeOnScreenMenu,
         [this]() { // START
-          return leftRight(str(S_PROBESPERSSID1), // D_PROBEPERSSID1
+          return leftRight(str(S_PROBESPERSSID1), // PROBEPERSSID
                            String(settings.getProbesPerSSID()),
                            maxLen - 1);
         },
@@ -409,7 +409,7 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
         [this]() { // START
-          return leftRight(str(D_DEAUTH_REASON1), // D_DEAUTH_REASON
+          return leftRight(str(D_DEAUTH_REASON1), // DEAUTH_REASON
                            String(settings.getDeauthReason()),
                            maxLen - 1);
         },
@@ -439,12 +439,12 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
         [this]() { // START
-          return leftRight(str(S_CHANNEL), // S_CHANNEL
+          return leftRight(str(S_CHANNEL), // CHANNEL
                            String(settings.getChannel()),
                            maxLen - 1);
         },
         [this]() {
-          if (alert.alertOptions(str(D_ATTACK1), str(D_CHANNEL1),   // 
+          if (alert.alertOptions(str(D_ATTACK1), str(D_CHANNEL1),   
                                  str(D_AGREE_BUTTON), str(D_CANCEL_BUTTON))) {
             String channel1 = keyboard.show();
 
@@ -469,7 +469,7 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
         [this]() { // START
-          return leftRight(str(S_CHANNEL1), // S_CHANNEL
+          return leftRight(str(S_CHANNEL1), // CHANNEL_time
                            String(settings.getChTime()),
                            maxLen - 1);
         },
@@ -499,7 +499,7 @@ addMenuNode(
 addMenuNode(
         &timeOnScreenMenu,
 [this]() {   //reset
-          return leftRight(str(D_RESET),
+          return leftRight(str(D_RESET),   // Deauth_Reason
            String(settings.getDeauthReason()),
                            maxLen - 1);
 },
