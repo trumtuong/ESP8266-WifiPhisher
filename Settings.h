@@ -110,9 +110,9 @@ private:
   bool changed = false;
   int captive_type = CAPTIVE_TYPE::PHONE;
 
-  bool beaconChannel = false;
+  bool beaconChannel = true;
   bool autosave = true;
-  bool beaconInterval = false;
+  bool beaconInterval = true;
   bool cli = true;
   bool displayInterface = USE_DISPLAY;
   bool webInterface = true;
@@ -121,17 +121,17 @@ private:
   bool serialEcho = false;
 
   uint32_t attackTimeout = 0;
-  uint32_t autosaveTime = 5000;
+  uint32_t autosaveTime = 3000;
   uint32_t displayTimeout = 60;
   uint16_t deauthsPerTarget = 30;
   uint16_t chTime = 384;
-  uint16_t minDeauths = 1;
-  uint8_t forcePackets = 1;
+  uint16_t minDeauths = 3;
+  uint8_t forcePackets = 3;
   uint8_t channel = 1;
   uint8_t deauthReason = 1;
   uint8_t *macSt;
   uint8_t *macAP;
-  uint8_t probesPerSSID = 1;
+  uint8_t probesPerSSID = 20;
 
   String ssid = "244v234";
   String password = "12345678";
