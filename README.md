@@ -1,3 +1,5 @@
+<p align="center"><img alt="PICTURE logo" src="https://hackster.imgix.net/uploads/attachments/1213890/_rWt12MqMzA.blob?auto=compress%2Cformat&w=900&h=675&fit=min" width="200"></p>
+
 <p align="center">
   👍<a href="https://facebook.com/244v234">Facebook</a>
 | 🐦 <a href="https://twitter.com/244v234">Twitter</a>
@@ -12,6 +14,10 @@ This software allows you to easily perform a variety of actions to test 802.11 w
 - It is capable of performing a social engineering attack to get a secret WPA / WPA2 password
 ## Video demo
 - [Youtube](https://youtu.be/9W9xHPFy9rc)
+## Pinout
+<p align="center"><img alt="PICTURE logo" src="https://hackster.imgix.net/uploads/attachments/1212694/244v234_pe3ov4zwv9_xBZN30K1NU.jpg?auto=compress%2Cformat&w=740&h=555&fit=max" width="200"></p>
+
+
 ## [Flashing the firmware bin file](https://www.hackster.io/234v244/esp8266-wifiphisher-4ed3d3)
 ## Compiling using Arduino IDE
 First you have to install and open the Arduino IDE.
