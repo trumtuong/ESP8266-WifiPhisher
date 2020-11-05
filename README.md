@@ -12,6 +12,8 @@ This software allows you to easily perform a variety of actions to test 802.11 w
 ## Main feature
 - The deauthentication attack, is used to disconnect devices from their WiFi network.	
 - It is capable of performing a social engineering attack to get a secret WPA / WPA2 password
+<p align="center"><img alt="PICTURE logo" src="https://hackster.imgix.net/uploads/attachments/1212751/z2157794471160_228d60f39af25e94bedaa5f43a7ae730_0KtXp9MOEw.jpg?auto=compress%2Cformat&w=740&h=555&fit=max" width="200"></p>
+
 ## Video demo
 - [Youtube](https://youtu.be/9W9xHPFy9rc)
 ## Pinout
